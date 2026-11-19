@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4efe5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Rediter">
+  <meta name="description" content="完全本地运行的 TXT 阅读与编辑工具">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+  <title>Rediter</title>
+</head>
+<body>
+  <main id="home-view" class="view home-view">
+    <header class="home-header">
+      <div>
+        <p class="eyebrow">本地 TXT 书库</p>
+        <h1>Rediter</h1>
+        <p class="privacy-note">文件只保存在这台设备，不会上传。</p>
+      </div>
+      <button id="import-button" class="primary-button" type="button">导入 TXT</button>
+    </header>
+
+    <section class="import-actions" aria-label="导入书籍">
+      <button id="folder-button" class="secondary-button" type="button">选择书库文件夹</button>
+      <button id="handle-button" class="secondary-button" type="button" hidden>打开并允许原位保存</button>
+      <input id="file-input" type="file" accept=".txt,text/plain" multiple hidden>
+      <input id="folder-input" type="file" accept=".txt,text/plain" webkitdirectory multiple hidden>
+    </section>
+
+    <p id="capability-note" class="capability-note" role="status"></p>
+    <section aria-labelledby="library-title">
+      <div class="section-heading">
+        <h2 id="library-title">我的书籍</h2>
+        <span id="book-count">0 本</span>
+      </div>
+      <div id="book-list" class="book-list"></div>
+      <div id="empty-library" class="empty-state">
+        <span aria-hidden="true">文</span>
+        <h2>书架还是空的</h2>
+        <p>选择一个或多个 TXT 文件开始阅读。</p>
+      </div>
+    </section>
+  </main>
+
+  <main id="reader-view" class="view reader-view" hidden>
+    <header class="reader-header">
+      <button id="back-button" class="icon-button" type="button" aria-label="返回书库">‹</button>
+      <div class="reader-title-wrap">
+        <h1 id="reader-title">未命名</h1>
+        <span id="save-status" aria-live="polite">已保存到本地书库</span>
+      </div>
+      <button id="save-button" class="text-button" type="button">保存</button>
+    </header>
+
+    <div id="search-panel" class="search-panel" hidden>
+      <label class="visually-hidden" for="search-input">搜索全文</label>
+      <input id="search-input" type="search" placeholder="搜索全文" autocomplete="off">
+      <span id="search-count">0 项</span>
+      <button id="search-prev" type="button" aria-label="上一个结果">↑</button>
+      <button id="search-next" type="button" aria-label="下一个结果">↓</button>
+      <button id="search-close" type="button" aria-label="关闭搜索">×</button>
+    </div>
+
+    <div id="editor-toolbar" class="editor-toolbar" hidden>
+      <button id="format-button" type="button">一键排版</button>
+      <span class="toolbar-divider"></span>
+      <button class="punctuation" data-value="，" type="button">，</button>
+      <button class="punctuation" data-value="。" type="button">。</button>
+      <button class="punctuation" data-value="“”" type="button">“ ”</button>
+      <button class="punctuation" data-value="……" type="button">……</button>
+    </div>
+
+    <section id="reading-scroller" class="reading-scroller" tabindex="0" aria-label="正文">
+      <article id="reading-content" class="reading-content"></article>
+    </section>
+    <textarea id="text-editor" class="text-editor" aria-label="编辑正文" spellcheck="false" hidden></textarea>
+
+    <nav class="bottom-bar" aria-label="阅读工具">
+      <button id="chapters-button" type="button"><span>☰</span>目录</button>
+      <button id="settings-button" type="button"><span>Aa</span>设置</button>
+      <button id="search-button" type="button"><span>⌕</span>搜索</button>
+      <button id="mode-button" type="button"><span>✎</span><b>编辑</b></button>
+    </nav>
+
+    <div id="overlay-scrim" class="overlay-scrim" hidden></div>
+    <aside id="chapter-drawer" class="chapter-drawer" aria-label="章节目录" hidden>
+      <header><h2>目录</h2><button id="chapter-close" type="button" aria-label="关闭目录">×</button></header>
+      <ol id="chapter-list"></ol>
+    </aside>
+    <section id="settings-sheet" class="settings-sheet" aria-label="阅读设置" hidden>
+      <div class="sheet-handle"></div>
+      <div class="setting-row">
+        <label for="font-size">字体大小</label>
+        <output id="font-size-value">18px</output>
+      </div>
+      <input id="font-size" type="range" min="14" max="32" step="1" value="18">
+      <div class="setting-row theme-row">
+        <span>主题</span>
+        <div class="segmented-control" role="group" aria-label="主题">
+          <button id="light-theme" class="active" type="button">浅色</button>
+          <button id="dark-theme" type="button">深色</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
