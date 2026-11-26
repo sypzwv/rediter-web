@@ -277,6 +277,8 @@ function setMode(mode) {
     renderReadingContent();
   }
   state.mode = mode;
+  elements.saveButton.hidden = !editing;
+  elements.reader.classList.remove("reading-fullscreen");
   elements.scroller.hidden = editing; elements.editor.hidden = !editing; elements.editorToolbar.hidden = !editing;
   elements.modeButton.querySelector("b").textContent = editing ? "阅读" : "编辑";
   elements.modeButton.querySelector("span").textContent = editing ? "▤" : "✎";
@@ -334,7 +336,47 @@ function jumpActiveMatch() {
   elements.content.querySelector(`mark[data-position="${position}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+function bindReadingGestures() {
+  const scroller = elements.scroller;
+  let gesture = null;
+  const hasSelection = () => !window.getSelection()?.isCollapsed;
+  scroller.addEventListener("pointerdown", (event) => {
+    if (!event.isPrimary || event.button !== 0) { gesture = null; return; }
+    if (state.mode !== "read" || hasSelection()) return;
+    gesture = { id: event.pointerId, x: event.clientX, y: event.clientY,
+      top: scroller.scrollTop, time: event.timeStamp };
+  });
+  scroller.addEventListener("pointermove", (event) => {
+    if (gesture && (Math.abs(event.clientX - gesture.x) > 10
+      || Math.abs(event.clientY - gesture.y) > 10)) gesture = null;
+  });
+  scroller.addEventListener("pointercancel", () => { gesture = null; });
+  scroller.addEventListener("pointerleave", () => { gesture = null; });
+  scroller.addEventListener("pointerup", (event) => {
+    const tap = gesture;
+    gesture = null;
+    if (!tap || tap.id !== event.pointerId || event.timeStamp - tap.time > 400
+      || Math.abs(scroller.scrollTop - tap.top) > 2 || hasSelection()
+      || state.mode !== "read" || !elements.scrim.hidden
+      || Math.abs(event.clientX - tap.x) > 10 || Math.abs(event.clientY - tap.y) > 10) return;
+    const rect = scroller.getBoundingClientRect();
+    const fraction = (event.clientY - rect.top) / rect.height;
+    const fullscreen = elements.reader.classList.contains("reading-fullscreen");
+    if (fraction >= 0.15 && fraction <= 0.85) {
+      elements.reader.classList.toggle("reading-fullscreen");
+    } else if (fullscreen && fraction >= 0 && fraction <= 1) {
+      // Keep a little overlap so the boundary line remains easy to follow.
+      const distance = scroller.clientHeight * 0.9;
+      scroller.scrollBy({ top: fraction < 0.15 ? -distance : distance, behavior: "instant" });
+    }
+  });
+  scroller.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") elements.reader.classList.remove("reading-fullscreen");
+  });
+}
+
 function bindEvents() {
+  bindReadingGestures();
   $("#import-button").addEventListener("click", () => elements.fileInput.click());
   elements.fileInput.addEventListener("change", (event) => importFiles(event.target.files).finally(() => { event.target.value = ""; }));
   elements.folderButton.addEventListener("click", () => elements.folderInput.click());

@@ -141,3 +141,10 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .chapter-drawer button[aria-current="location"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+/* Fullscreen reading fills the app viewport; native scrolling and selection remain available. */
+.reader-view.reading-fullscreen { grid-template-rows: minmax(0, 1fr); }
+.reading-fullscreen > .reader-header,
+.reading-fullscreen > .bottom-bar,
+.reading-fullscreen > .search-panel { display: none; }
+.reading-fullscreen > .reading-scroller { grid-row: 1; }
