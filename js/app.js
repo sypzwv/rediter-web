@@ -160,15 +160,84 @@ async function openBook(id) {
   history.pushState({ bookId: id }, "", `#book=${encodeURIComponent(id)}`);
 }
 
+// Measure the rendered character, including text split by search highlights.
+function positionTop(container, position) {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    if (position < node.length) {
+      const range = document.createRange();
+      range.setStart(node, position);
+      range.setEnd(node, position + 1);
+      return range.getBoundingClientRect().top - container.getBoundingClientRect().top;
+    }
+    position -= node.length;
+  }
+  return container.scrollHeight;
+}
+
+function withChapterLayout(callback) {
+  if (state.mode !== "edit") {
+    const scroller = elements.scroller;
+    const origin = elements.content.getBoundingClientRect().top
+      - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    return callback(scroller, (position) => origin + positionTop(elements.content, position));
+  }
+  // A textarea has no text nodes. Mirror its typography and wrapping for measurement.
+  const editor = elements.editor;
+  const mirror = document.createElement("div");
+  const style = getComputedStyle(editor);
+  for (const property of ["font", "line-height", "letter-spacing", "padding", "border", "box-sizing", "tab-size", "word-break", "overflow-wrap", "text-indent"]) {
+    mirror.style.setProperty(property, style.getPropertyValue(property));
+  }
+  Object.assign(mirror.style, {
+    position: "fixed", top: "0", left: "0", visibility: "hidden",
+    width: `${editor.clientWidth}px`, boxSizing: "border-box", border: "0",
+    whiteSpace: "pre-wrap", overflowWrap: "break-word", pointerEvents: "none",
+  });
+  mirror.textContent = editor.value;
+  document.body.append(mirror);
+  try { return callback(editor, (position) => positionTop(mirror, position)); }
+  finally { mirror.remove(); }
+}
+
 function jumpToPosition(position) {
   if (state.mode === "edit") {
-    elements.editor.focus(); elements.editor.setSelectionRange(position, position);
-    const ratio = position / Math.max(1, state.book.text.length);
-    elements.editor.scrollTop = ratio * (elements.editor.scrollHeight - elements.editor.clientHeight);
-    return;
+    elements.editor.focus({ preventScroll: true });
+    elements.editor.setSelectionRange(position, position);
   }
-  const ratio = position / Math.max(1, state.book.text.length);
-  elements.scroller.scrollTo({ top: ratio * (elements.scroller.scrollHeight - elements.scroller.clientHeight), behavior: "smooth" });
+  withChapterLayout((scroller, topAt) => {
+    scroller.scrollTo({ top: Math.max(0, topAt(position) - 8), behavior: "instant" });
+  });
+}
+
+function openChapters() {
+  if (state.mode === "edit") {
+    state.chapters = parseChapters(elements.editor.value);
+    renderChapters();
+  }
+  const current = withChapterLayout((scroller, topAt) => {
+    // Find the last heading at or above the first visible reading line.
+    let low = 0, high = state.chapters.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (topAt(state.chapters[middle].position) <= scroller.scrollTop + 9) low = middle + 1;
+      else high = middle;
+    }
+    return Math.max(0, low - 1);
+  });
+  openOverlay(elements.chapterDrawer);
+  const buttons = elements.chapterList.querySelectorAll("button");
+  buttons.forEach((button, index) => {
+    if (index === current) button.setAttribute("aria-current", "location");
+    else button.removeAttribute("aria-current");
+  });
+  const button = buttons[current];
+  if (button) {
+    const drawer = elements.chapterDrawer;
+    drawer.scrollTop += button.getBoundingClientRect().top - drawer.getBoundingClientRect().top
+      - drawer.clientHeight / 2 + button.offsetHeight / 2;
+  }
 }
 
 async function persistBook() {
@@ -278,7 +347,7 @@ function bindEvents() {
   });
   $("#back-button").addEventListener("click", () => navigateHome());
   elements.saveButton.addEventListener("click", exportOrOverwrite);
-  $("#chapters-button").addEventListener("click", () => openOverlay(elements.chapterDrawer));
+  $("#chapters-button").addEventListener("click", openChapters);
   $("#settings-button").addEventListener("click", () => openOverlay(elements.settingsSheet));
   $("#chapter-close").addEventListener("click", closeOverlays); elements.scrim.addEventListener("click", closeOverlays);
   $("#search-button").addEventListener("click", () => { elements.searchPanel.hidden = false; elements.searchInput.focus(); });
